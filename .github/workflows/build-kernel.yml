@@ -1,4 +1,4 @@
-  name: Build Mi A3 Custom Kernel (laurel_sprout)
+name: Build Mi A3 Custom Kernel (laurel_sprout)
 
 on:
   workflow_dispatch:   # Manual trigger from Actions tab
