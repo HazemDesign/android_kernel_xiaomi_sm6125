@@ -1,0 +1,63 @@
+  name: Build Mi A3 Custom Kernel (laurel_sprout)
+
+on:
+  workflow_dispatch:   # Manual trigger from Actions tab
+  push:
+    branches: [ lineage-23.2 ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout kernel source
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq \
+            gcc-aarch64-linux-gnu \
+            gcc-arm-linux-gnueabi \
+            bc bison flex libssl-dev make cpio
+
+      - name: Create custom config fragment
+        run: |
+          cat > arch/arm64/configs/vendor/laurel_sprout-custom.config << 'CONFIGEOF'
+          # Custom config for Mi A3 (laurel_sprout) - IR + OTG + Magisk fix
+
+          # === IR Blaster ===
+          CONFIG_IR_MSM_GENI=y
+          CONFIG_RC_CORE=y
+
+          # === USB OTG (DWC3 dual-role) ===
+          CONFIG_USB_DWC3_DUAL_ROLE=y
+
+          # === Magisk fix: disable static usermodehelper ===
+          # CONFIG_STATIC_USERMODEHELPER is not set
+          CONFIGEOF
+
+      - name: Configure kernel (base + fragments + custom)
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/atoll-perf_defconfig
+          scripts/kconfig/merge_config.sh -m -O . .config \
+            arch/arm64/configs/vendor/laurel_sprout.config \
+            arch/arm64/configs/vendor/laurel_sprout-custom.config
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+
+      - name: Build kernel + DTBs
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image.gz dtbs
+
+      - name: Concatenate kernel + DTB into Image.gz-dtb
+        run: |
+          cat arch/arm64/boot/Image.gz \
+            arch/arm64/boot/dts/xiaomi/laurel_sprout-trinket-base.dtb \
+            > arch/arm64/boot/Image.gz-dtb
+          ls -lh arch/arm64/boot/Image.gz-dtb
+
+      - name: Upload Image.gz-dtb
+        uses: actions/upload-artifact@v4
+        with:
+          name: Image.gz-dtb
+          path: arch/arm64/boot/Image.gz-dtb
+          if-no-files-found: error
