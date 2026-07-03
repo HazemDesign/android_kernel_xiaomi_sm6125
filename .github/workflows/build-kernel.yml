@@ -44,6 +44,11 @@ jobs:
             arch/arm64/configs/vendor/laurel_sprout-custom.config
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
+      - name: Fix GCC 13+ compatibility for kernel 4.14
+        run: |
+          sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
+          head -6 include/linux/compiler_types.h
+
       - name: Build kernel + DTBs
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image.gz dtbs
