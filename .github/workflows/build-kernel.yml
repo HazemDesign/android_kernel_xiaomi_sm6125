@@ -23,20 +23,12 @@
         - name: Create custom config fragment
           run: |
             cat > arch/arm64/configs/vendor/laurel_sprout-custom.config << 'CONFIGEOF'
-            # Custom config for Mi A3 (laurel_sprout) - IR + OTG + Magisk fix
-
-            # === IR Blaster ===
             CONFIG_IR_MSM_GENI=y
             CONFIG_RC_CORE=y
-
-            # === USB OTG (DWC3 dual-role) ===
             CONFIG_USB_DWC3_DUAL_ROLE=y
-
-            # === Magisk fix: disable static usermodehelper ===
-            # CONFIG_STATIC_USERMODEHELPER is not set
             CONFIGEOF
 
-        - name: Configure kernel (base + fragments + custom)
+        - name: Configure kernel
           run: |
             make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/atoll-perf_defconfig
             scripts/kconfig/merge_config.sh -m -O . .config \
@@ -44,30 +36,40 @@
               arch/arm64/configs/vendor/laurel_sprout-custom.config
             make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-        - name: Fix GCC 13+ compatibility for kernel 4.14
+        - name: Fix GCC 13+ compatibility
           run: |
             sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
-            head -6 include/linux/compiler_types.h
 
-        - name: Fix bolero format strings (GCC 13+ -Werror=format)
+        - name: Fix bolero format strings
           run: |
             sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
             sed -i 's/"%s: dev is null %d\\n"/"%s: dev is null\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-clk-rsc.c
 
-        - name: Fix cam_trace.h include path for GCC 13+
+        - name: Fix cam_trace.h include path
           run: |
-            # TRACE_INCLUDE_PATH is resolved relative to include/trace/ (where define_trace.h lives)
-            # ../../drivers/... navigates UP from include/trace/ to kernel root, then into camera dir
             sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH ../../drivers/media/platform/msm/camera/cam_utils|' \
               drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
-        - name: Fix DTC overlay (add THERMAL defines to CPP flags + sed belt-and-suspenders)
+        - name: Fix DTC overlay and diagnose
           run: |
-            # Add THERMAL_* defines to dtc_cpp_flags so CPP always has them available
-            # regardless of whether dt-bindings/thermal/thermal.h can be found.
+            set -x
+            DIAGNOSTIC=1
+
+            # --- DIAGNOSE: before fix ---
+            echo "=== BEFORE FIX: sdmmagpie-thermal-overlay.dtsi ==="
+            wc -l arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+            head -20 arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+
+            # Check include-prefixes symlink
+            echo "=== include-prefixes check ==="
+            ls -la scripts/dtc/include-prefixes/ 2>/dev/null || echo "MISSING: scripts/dtc/include-prefixes/"
+            ls -la scripts/dtc/include-prefixes/dt-bindings/ 2>/dev/null || echo "MISSING: dt-bindings symlink"
+            readlink -f scripts/dtc/include-prefixes/dt-bindings 2>/dev/null || echo "BROKEN symlink"
+
+            # --- FIX 1: Add -D defines to dtc_cpp_flags ---
             echo 'dtc_cpp_flags += -DTHERMAL_NO_LIMIT="(~0)" -DTHERMAL_MAX_LIMIT="((~0)-1)"' >> scripts/Makefile.lib
-            # Belt-and-suspenders: replace THERMAL_* with hex values directly in the dtsi
-            # in case CPP preprocessing fails silently.
+
+            # --- FIX 2: sed THERMAL_* replacement ---
             sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
               arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
             sed -i 's/THERMAL_NO_LIMIT/0xFFFFFFFF/g' \
@@ -75,11 +77,25 @@
             sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
               arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
 
+            # --- DIAGNOSE: after fix ---
+            echo "=== AFTER FIX: sdmmagpie-thermal-overlay.dtsi ==="
+            head -20 arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+            grep -n 'THERMAL\|#include' arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi; true
+
+            # --- DIAGNOSE: preprocess and check ---
+            echo "=== CPP PREPROCESSED (first 30 lines) ==="
+            aarch64-linux-gnu-cpp -nostdinc -I scripts/dtc/include-prefixes \
+              -undef -D__DTS__ -x assembler-with-cpp \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi \
+              -o /tmp/sdmmagpie-preproc.dts 2>&1
+            head -30 /tmp/sdmmagpie-preproc.dts
+            wc -l /tmp/sdmmagpie-preproc.dts
+
         - name: Build kernel + DTBs
           run: |
-            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
+            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j Image.gz dtbs
 
-        - name: Concatenate kernel + DTB into Image.gz-dtb
+        - name: Concatenate kernel + DTB
           run: |
             cat arch/arm64/boot/Image.gz \
               arch/arm64/boot/dts/xiaomi/laurel_sprout-trinket-base.dtb \
