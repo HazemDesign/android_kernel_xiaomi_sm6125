@@ -51,10 +51,12 @@ jobs:
           sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH ../../drivers/media/platform/msm/camera/cam_utils|' \
             drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
-
       - name: Build kernel + DTBs
         run: |
-          # Disable DT overlay compilation (DTC in this env rejects /plugin/ syntax)
+          # Base DTB (laurel_sprout-trinket-base.dtb) is only built as a
+          # dependency of the overlay; with DT overlays disabled we add it
+          # explicitly so the concatenation step finds it.
+          sed -i '/^endif$/a dtb-y += laurel_sprout-trinket-base.dtb' arch/arm64/boot/dts/xiaomi/Makefile
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
       - name: Concatenate kernel + DTB
