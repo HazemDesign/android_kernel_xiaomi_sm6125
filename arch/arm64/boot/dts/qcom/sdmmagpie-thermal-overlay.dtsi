@@ -10,7 +10,7 @@
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  */
-#include <dt-bindings/thermal/thermal.h>
+/* THERMAL_NO_LIMIT=0xFFFFFFFF, THERMAL_MAX_LIMIT=0xFFFFFFFE (hardcoded for DTC overlay compat) */
 
 &thermal_zones {
 	pm6150-tz {
@@ -18,14 +18,14 @@
 			trip0_bat {
 				trip = <&pm6150_trip0>;
 				cooling-device =
-					<&pm6150_charger (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&pm6150_charger 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip1_bat {
 				trip = <&pm6150_trip1>;
 				cooling-device =
-					<&pm6150_charger THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&pm6150_charger 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 		};
 	};
@@ -35,92 +35,92 @@
 			trip0_cpu0 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU0 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU0 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu1 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU1 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU1 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu2 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU2 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU2 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu3 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU3 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU3 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu4 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU4 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU4 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu5 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU5 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU5 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu6 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU6 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU6 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip0_cpu7 {
 				trip = <&pm6150l_trip0>;
 				cooling-device =
-					<&CPU7 (THERMAL_MAX_LIMIT-1)
-						(THERMAL_MAX_LIMIT-1)>;
+					<&CPU7 0xFFFFFFFD
+						0xFFFFFFFD>;
 			};
 			trip1_cpu1 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU1 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU1 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			trip1_cpu2 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU2 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU2 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			trip1_cpu3 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU3 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU3 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			trip1_cpu4 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU4 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU4 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			trip1_cpu5 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU5 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU5 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			trip1_cpu6 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU6 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU6 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			trip1_cpu7 {
 				trip = <&pm6150l_trip1>;
 				cooling-device =
-					<&CPU7 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU7 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 		};
 	};
@@ -130,14 +130,14 @@
 			vbat_cpu6 {
 				trip = <&bcl_lvl0>;
 				cooling-device =
-					<&CPU6 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU6 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			vbat_cpu7 {
 				trip = <&bcl_lvl0>;
 				cooling-device =
-					<&CPU7 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU7 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 		};
 	};
@@ -147,14 +147,14 @@
 			ibat_cpu6 {
 				trip = <&bcl_lvl1>;
 				cooling-device =
-					<&CPU6 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU6 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			ibat_cpu7 {
 				trip = <&bcl_lvl1>;
 				cooling-device =
-					<&CPU7 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU7 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 		};
 	};
@@ -164,14 +164,14 @@
 			ibat_cpu6 {
 				trip = <&bcl_lvl2>;
 				cooling-device =
-					<&CPU6 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU6 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			ibat_cpu7 {
 				trip = <&bcl_lvl2>;
 				cooling-device =
-					<&CPU7 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU7 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 		};
 	};
@@ -181,14 +181,14 @@
 			soc_cpu6 {
 				trip = <&soc_trip>;
 				cooling-device =
-					<&CPU6 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU6 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 			soc_cpu7 {
 				trip = <&soc_trip>;
 				cooling-device =
-					<&CPU7 THERMAL_MAX_LIMIT
-						THERMAL_MAX_LIMIT>;
+					<&CPU7 0xFFFFFFFE
+						0xFFFFFFFE>;
 			};
 		};
 	};
