@@ -56,7 +56,18 @@ jobs:
 
       - name: Fix cam_trace.h include path for GCC 13+
         run: |
-          sed -i 's|#define TRACE_INCLUDE_FILE \./|#define TRACE_INCLUDE_FILE |' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
+          # TRACE_INCLUDE_PATH . resolves ./cam_trace.h relative to kernel root, not source dir
+          sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
+
+      - name: Fix DTC overlay (preprocess dtsi with CPP for angle-bracket includes)
+        run: |
+          # DTC alone cannot handle #include <...> (angle-bracket include syntax).
+          # Preprocess the dtsi through CPP to resolve dt-bindings includes first.
+          cpp -P -D__DTS__ -I include -I arch/arm64/boot/dts/qcom -undef \
+            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi \
+            -o /tmp/sdmmagpie-preprocessed.dtsi
+          cp /tmp/sdmmagpie-preprocessed.dtsi \
+            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
 
       - name: Build kernel + DTBs
         run: |
