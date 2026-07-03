@@ -26,6 +26,7 @@ jobs:
           CONFIG_IR_MSM_GENI=y
           CONFIG_RC_CORE=y
           CONFIG_USB_DWC3_DUAL_ROLE=y
+          # CONFIG_BUILD_ARM64_DT_OVERLAY is not set
           CONFIGEOF
 
       - name: Configure kernel
@@ -53,7 +54,7 @@ jobs:
 
       - name: Build kernel + DTBs
         run: |
-          sed -i '/^dtbo-/d' arch/arm64/boot/dts/qcom/Makefile
+          # Disable DT overlay compilation (DTC in this env rejects /plugin/ syntax)
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
       - name: Concatenate kernel + DTB
