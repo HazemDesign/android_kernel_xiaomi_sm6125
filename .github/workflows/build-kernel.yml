@@ -56,17 +56,22 @@
 
         - name: Fix cam_trace.h include path for GCC 13+
           run: |
-            # TRACE_INCLUDE_PATH . resolves ./cam_trace.h relative to kernel root, not source dir
-            sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
+            # TRACE_INCLUDE_PATH is resolved relative to include/trace/ (where define_trace.h lives)
+            # ../../drivers/... navigates FROM include/trace/ UP to kernel root, then into camera dir
+            sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH ../../drivers/media/platform/msm/camera/cam_utils|' \
+              drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
-        - name: Fix DTC overlay (inline thermal constants, no CPP)
+        - name: Fix DTC overlay (pre-CPP to resolve includes/macros)
           run: |
-            # DTC alone (no CPP preprocessing) cannot handle #include <...>
-            # or #define. Replace THERMAL_* macros with their numeric values:
-            #   THERMAL_NO_LIMIT = (~0) = 0xFFFFFFFF
-            #   THERMAL_MAX_LIMIT = (~0-1) = 0xFFFFFFFE
-            sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
+            # Preprocess dtsi via CPP to resolve all #include and #define,
+            # suppress linemarkers (-P) so DTC's older parser doesn't choke.
+            cpp -nostdinc -I scripts/dtc/include-prefixes -undef -D__DTS__ \
+              -x assembler-with-cpp -P \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi \
+              -o /tmp/sdmmagpie-clean.tmp
+            cp /tmp/sdmmagpie-clean.tmp \
               arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+            # Belt-and-suspenders: replace any THERMAL_* that leaked through
             sed -i 's/THERMAL_NO_LIMIT/0xFFFFFFFF/g' \
               arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
             sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
@@ -74,7 +79,7 @@
 
         - name: Build kernel + DTBs
           run: |
-            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
+            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j Image.gz dtbs
 
         - name: Concatenate kernel + DTB into Image.gz-dtb
           run: |
