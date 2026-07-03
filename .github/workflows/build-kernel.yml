@@ -53,6 +53,7 @@ jobs:
 
       - name: Build kernel + DTBs
         run: |
+          sed -i '/atoll-ab-atp-overlay/d' arch/arm64/boot/dts/qcom/Makefile
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
       - name: Concatenate kernel + DTB
