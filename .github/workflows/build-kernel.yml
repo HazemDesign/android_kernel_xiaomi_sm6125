@@ -49,6 +49,10 @@ jobs:
           sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
           head -6 include/linux/compiler_types.h
 
+      - name: Fix format string in bolero audio driver (GCC 13+ -Werror=format)
+        run: |
+          sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
+
       - name: Build kernel + DTBs
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) Image.gz dtbs
