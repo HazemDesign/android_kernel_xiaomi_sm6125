@@ -59,18 +59,18 @@
             # TRACE_INCLUDE_PATH . resolves ./cam_trace.h relative to kernel root, not source dir
             sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
-      - name: Fix DTC overlay (inline thermal constants, no CPP)
-        run: |
-          # DTC alone (no CPP preprocessing) cannot handle #include <...>
-          # or #define. Replace THERMAL_* macros with their numeric values:
-          #   THERMAL_NO_LIMIT = (~0) = 0xFFFFFFFF
-          #   THERMAL_MAX_LIMIT = (~0-1) = 0xFFFFFFFE
-          sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
-            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
-          sed -i 's/THERMAL_NO_LIMIT/0xFFFFFFFF/g' \
-            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
-          sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
-            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+        - name: Fix DTC overlay (inline thermal constants, no CPP)
+          run: |
+            # DTC alone (no CPP preprocessing) cannot handle #include <...>
+            # or #define. Replace THERMAL_* macros with their numeric values:
+            #   THERMAL_NO_LIMIT = (~0) = 0xFFFFFFFF
+            #   THERMAL_MAX_LIMIT = (~0-1) = 0xFFFFFFFE
+            sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+            sed -i 's/THERMAL_NO_LIMIT/0xFFFFFFFF/g' \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+            sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
 
         - name: Build kernel + DTBs
           run: |
