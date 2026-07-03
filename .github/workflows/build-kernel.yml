@@ -1,88 +1,90 @@
-name: Build Mi A3 Custom Kernel (laurel_sprout)
+  name: Build Mi A3 Custom Kernel (laurel_sprout)
 
-on:
-  workflow_dispatch:   # Manual trigger from Actions tab
-  push:
-    branches: [ lineage-23.2 ]
+  on:
+    workflow_dispatch:   # Manual trigger from Actions tab
+    push:
+      branches: [ lineage-23.2 ]
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout kernel source
-        uses: actions/checkout@v4
+  jobs:
+    build:
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout kernel source
+          uses: actions/checkout@v4
 
-      - name: Install toolchain
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq \
-            gcc-aarch64-linux-gnu \
-            gcc-arm-linux-gnueabi \
-            bc bison flex libssl-dev make cpio
+        - name: Install toolchain
+          run: |
+            sudo apt-get update -qq
+            sudo apt-get install -y -qq \
+              gcc-aarch64-linux-gnu \
+              gcc-arm-linux-gnueabi \
+              bc bison flex libssl-dev make cpio
 
-      - name: Create custom config fragment
-        run: |
-          cat > arch/arm64/configs/vendor/laurel_sprout-custom.config << 'CONFIGEOF'
-          # Custom config for Mi A3 (laurel_sprout) - IR + OTG + Magisk fix
+        - name: Create custom config fragment
+          run: |
+            cat > arch/arm64/configs/vendor/laurel_sprout-custom.config << 'CONFIGEOF'
+            # Custom config for Mi A3 (laurel_sprout) - IR + OTG + Magisk fix
 
-          # === IR Blaster ===
-          CONFIG_IR_MSM_GENI=y
-          CONFIG_RC_CORE=y
+            # === IR Blaster ===
+            CONFIG_IR_MSM_GENI=y
+            CONFIG_RC_CORE=y
 
-          # === USB OTG (DWC3 dual-role) ===
-          CONFIG_USB_DWC3_DUAL_ROLE=y
+            # === USB OTG (DWC3 dual-role) ===
+            CONFIG_USB_DWC3_DUAL_ROLE=y
 
-          # === Magisk fix: disable static usermodehelper ===
-          # CONFIG_STATIC_USERMODEHELPER is not set
-          CONFIGEOF
+            # === Magisk fix: disable static usermodehelper ===
+            # CONFIG_STATIC_USERMODEHELPER is not set
+            CONFIGEOF
 
-      - name: Configure kernel (base + fragments + custom)
-        run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/atoll-perf_defconfig
-          scripts/kconfig/merge_config.sh -m -O . .config \
-            arch/arm64/configs/vendor/laurel_sprout.config \
-            arch/arm64/configs/vendor/laurel_sprout-custom.config
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
+        - name: Configure kernel (base + fragments + custom)
+          run: |
+            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/atoll-perf_defconfig
+            scripts/kconfig/merge_config.sh -m -O . .config \
+              arch/arm64/configs/vendor/laurel_sprout.config \
+              arch/arm64/configs/vendor/laurel_sprout-custom.config
+            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Fix GCC 13+ compatibility for kernel 4.14
-        run: |
-          sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
-          head -6 include/linux/compiler_types.h
+        - name: Fix GCC 13+ compatibility for kernel 4.14
+          run: |
+            sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
+            head -6 include/linux/compiler_types.h
 
-      - name: Fix bolero format strings (GCC 13+ -Werror=format)
-        run: |
-          sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
-          sed -i 's/"%s: dev is null %d\\n"/"%s: dev is null\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-clk-rsc.c
+        - name: Fix bolero format strings (GCC 13+ -Werror=format)
+          run: |
+            sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
+            sed -i 's/"%s: dev is null %d\\n"/"%s: dev is null\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-clk-rsc.c
 
-      - name: Fix cam_trace.h include path for GCC 13+
-        run: |
-          # TRACE_INCLUDE_PATH . resolves ./cam_trace.h relative to kernel root, not source dir
-          sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
+        - name: Fix cam_trace.h include path for GCC 13+
+          run: |
+            # TRACE_INCLUDE_PATH . resolves ./cam_trace.h relative to kernel root, not source dir
+            sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
-      - name: Fix DTC overlay (preprocess dtsi with CPP for angle-bracket includes)
-        run: |
-          # DTC alone cannot handle #include <...> (angle-bracket include syntax).
-          # Preprocess the dtsi through CPP to resolve dt-bindings includes first.
-          cpp -P -D__DTS__ -I include -I arch/arm64/boot/dts/qcom -undef \
-            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi \
-            -o /tmp/sdmmagpie-preprocessed.dtsi
-          cp /tmp/sdmmagpie-preprocessed.dtsi \
-            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+        - name: Fix DTC overlay (preprocess dtsi with CPP for angle-bracket includes)
+          run: |
+            # DTC alone cannot handle #include <...> (angle-bracket include syntax).
+            # Preprocess through gcc -E -x assembler-with-cpp (same as kernel's normal
+            # DTS build) so #address-cells, #cooling-cells etc. pass through verbatim.
+            gcc -E -x assembler-with-cpp -P -D__DTS__ \
+              -I include -I arch/arm64/boot/dts/qcom -undef \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi \
+              -o /tmp/sdmmagpie-preprocessed.dtsi
+            cp /tmp/sdmmagpie-preprocessed.dtsi \
+              arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
 
-      - name: Build kernel + DTBs
-        run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
+        - name: Build kernel + DTBs
+          run: |
+            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
-      - name: Concatenate kernel + DTB into Image.gz-dtb
-        run: |
-          cat arch/arm64/boot/Image.gz \
-            arch/arm64/boot/dts/xiaomi/laurel_sprout-trinket-base.dtb \
-            > arch/arm64/boot/Image.gz-dtb
-          ls -lh arch/arm64/boot/Image.gz-dtb
+        - name: Concatenate kernel + DTB into Image.gz-dtb
+          run: |
+            cat arch/arm64/boot/Image.gz \
+              arch/arm64/boot/dts/xiaomi/laurel_sprout-trinket-base.dtb \
+              > arch/arm64/boot/Image.gz-dtb
+            ls -lh arch/arm64/boot/Image.gz-dtb
 
-      - name: Upload Image.gz-dtb
-        uses: actions/upload-artifact@v4
-        with:
-          name: Image.gz-dtb
-          path: arch/arm64/boot/Image.gz-dtb
-          if-no-files-found: error
+        - name: Upload Image.gz-dtb
+          uses: actions/upload-artifact@v4
+          with:
+            name: Image.gz-dtb
+            path: arch/arm64/boot/Image.gz-dtb
+            if-no-files-found: error
