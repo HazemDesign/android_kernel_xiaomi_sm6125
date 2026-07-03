@@ -79,7 +79,7 @@
 
         - name: Build kernel + DTBs
           run: |
-            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j Image.gz dtbs
+            make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
         - name: Concatenate kernel + DTB into Image.gz-dtb
           run: |
