@@ -76,7 +76,14 @@ jobs:
       - name: Build kernel
         run: |
           scripts/config --file .config --disable DEBUG_INFO
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) 2>&1 | tail -50
+          echo "=== Testing cross-compiler ==="
+          aarch64-linux-gnu-gcc --version
+          echo "=== Compiling one file ==="
+          time make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- kernel/time/time.o V=1 2>&1
+          echo "=== Single file done ==="
+          ls -la kernel/time/time.o
+          echo "=== Starting full build ==="
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) 2>&1
           echo "=== BUILD EXIT CODE: $? ==="
 
       - name: Show built images
