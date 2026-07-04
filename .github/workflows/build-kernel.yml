@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - name: Checkout kernel source
         uses: actions/checkout@v4
@@ -32,6 +32,8 @@ jobs:
           CONFIG_USB_DWC3_DUAL_ROLE=y
           # Magisk fix: disable static usermodehelper
           # CONFIG_STATIC_USERMODEHELPER is not set
+          # Reduce memory per compilation unit (GCC 13+ is memory-hungry)
+          # CONFIG_DEBUG_INFO is not set
           CONFIGEOF
 
       - name: Configure kernel (base + fragments)
@@ -78,7 +80,7 @@ jobs:
       - name: Build kernel Image.gz (serial, low-mem)
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            KCFLAGS="-Wno-error -pipe" KERNEL_EXTRA_FLAGS="-g0" \
+            KCFLAGS="-Wno-error -pipe" \
             -j1 Image.gz
 
       - name: Build DTBs (serial)
