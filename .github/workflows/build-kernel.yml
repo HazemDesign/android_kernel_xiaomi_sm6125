@@ -30,7 +30,7 @@ jobs:
           CONFIG_USB_DWC3_DUAL_ROLE=y
           # CONFIG_STATIC_USERMODEHELPER is not set
           # CONFIG_DEBUG_INFO is not set
-CONFIGEOF
+          CONFIGEOF
 
       - name: Configure kernel
         run: |
