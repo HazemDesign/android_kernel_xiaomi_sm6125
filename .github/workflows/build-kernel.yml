@@ -52,10 +52,6 @@ jobs:
           sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
           sed -i 's/"%s: dev is null %d\\n"/"%s: dev is null\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-clk-rsc.c
 
-      - name: Fix cam_trace.h include path for GCC 13+
-        run: |
-          sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
-
       - name: Fix DTC overlay (inline thermal constants, no CPP)
         run: |
           sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
