@@ -56,6 +56,15 @@ jobs:
         run: |
           sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
+      - name: Fix DTC overlay (inline thermal constants, no CPP)
+        run: |
+          sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
+            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+          sed -i 's/THERMAL_NO_LIMIT/0xFFFFFFFF/g' \
+            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+          sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
+            arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
+
       - name: Build kernel + DTBs
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
