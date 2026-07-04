@@ -23,13 +23,18 @@ jobs:
       - name: Create custom config fragment
         run: |
           cat > arch/arm64/configs/vendor/laurel_sprout-custom.config << 'CONFIGEOF'
-          CONFIG_IR_MSM_GENI=y
+          # Custom config for Mi A3 (laurel_sprout) - IR + OTG + Magisk fix
+          # IR blaster: SPI IR LED driver (matches DTS "ir-spi-led")
           CONFIG_RC_CORE=y
+          CONFIG_IR_SPI=y
+          CONFIG_LIRC=y
+          # USB OTG: DWC3 dual-role
           CONFIG_USB_DWC3_DUAL_ROLE=y
-          # CONFIG_BUILD_ARM64_DT_OVERLAY is not set
+          # Magisk fix: disable static usermodehelper
+          # CONFIG_STATIC_USERMODEHELPER is not set
           CONFIGEOF
 
-      - name: Configure kernel
+      - name: Configure kernel (base + fragments)
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/atoll-perf_defconfig
           scripts/kconfig/merge_config.sh -m -O . .config \
@@ -37,29 +42,25 @@ jobs:
             arch/arm64/configs/vendor/laurel_sprout-custom.config
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- olddefconfig
 
-      - name: Fix GCC 13+ compatibility
+      - name: Fix GCC 13+ compatibility (__has_attribute)
         run: |
           sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
+          head -6 include/linux/compiler_types.h
 
-      - name: Fix bolero format strings
+      - name: Fix bolero format strings (GCC 13+ -Werror=format)
         run: |
           sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
           sed -i 's/"%s: dev is null %d\\n"/"%s: dev is null\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-clk-rsc.c
 
-      - name: Fix cam_trace.h include path
+      - name: Fix cam_trace.h include path for GCC 13+
         run: |
-          sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH ../../drivers/media/platform/msm/camera/cam_utils|' \
-            drivers/media/platform/msm/camera/cam_utils/cam_trace.h
+          sed -i 's|#define TRACE_INCLUDE_PATH \.$|#define TRACE_INCLUDE_PATH drivers/media/platform/msm/camera/cam_utils|' drivers/media/platform/msm/camera/cam_utils/cam_trace.h
 
       - name: Build kernel + DTBs
         run: |
-          # Base DTB (laurel_sprout-trinket-base.dtb) is only built as a
-          # dependency of the overlay; with DT overlays disabled we add it
-          # explicitly so the concatenation step finds it.
-          sed -i '/^endif$/a dtb-y += laurel_sprout-trinket-base.dtb' arch/arm64/boot/dts/xiaomi/Makefile
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
-      - name: Concatenate kernel + DTB
+      - name: Concatenate kernel + DTB into Image.gz-dtb
         run: |
           cat arch/arm64/boot/Image.gz \
             arch/arm64/boot/dts/xiaomi/laurel_sprout-trinket-base.dtb \
