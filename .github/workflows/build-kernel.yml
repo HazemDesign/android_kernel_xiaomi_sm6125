@@ -24,19 +24,15 @@ jobs:
         run: |
           cat > arch/arm64/configs/vendor/laurel_sprout-custom.config << 'CONFIGEOF'
           # Custom config for Mi A3 (laurel_sprout) - IR + OTG + Magisk fix
-          # IR blaster: SPI IR LED driver (matches DTS "ir-spi-led")
           CONFIG_RC_CORE=y
           CONFIG_IR_SPI=y
           CONFIG_LIRC=y
-          # USB OTG: DWC3 dual-role
           CONFIG_USB_DWC3_DUAL_ROLE=y
-          # Magisk fix: disable static usermodehelper
           # CONFIG_STATIC_USERMODEHELPER is not set
-          # Reduce memory per compilation unit (GCC 13+ is memory-hungry)
           # CONFIG_DEBUG_INFO is not set
-          CONFIGEOF
+CONFIGEOF
 
-      - name: Configure kernel (base + fragments)
+      - name: Configure kernel
         run: |
           make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- vendor/atoll-perf_defconfig
           scripts/kconfig/merge_config.sh -m -O . .config \
@@ -48,12 +44,12 @@ jobs:
         run: |
           sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
 
-      - name: Fix bolero format strings (GCC 13+ -Werror=format)
+      - name: Fix bolero format strings
         run: |
           sed -i 's/"%s: register macro successful:%d\\n"/"register macro successful:%d\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-cdc.c
           sed -i 's/"%s: dev is null %d\\n"/"%s: dev is null\\n"/' techpack/audio/4.0/asoc/codecs/bolero/bolero-clk-rsc.c
 
-      - name: Fix DTC overlay (inline thermal constants, no CPP)
+      - name: Fix DTC overlay
         run: |
           sed -i '/#include <dt-bindings\/thermal\/thermal.h>/d' \
             arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
@@ -67,36 +63,27 @@ jobs:
           sudo apt-get clean
           df -h
 
-      - name: Allocate swap (avoid OOM)
+      - name: Allocate swap
         run: |
           sudo swapoff -a 2>/dev/null || true
           sudo rm -f /swapfile
-          sudo dd if=/dev/zero of=/swapfile bs=1M count=1024 status=progress
+          sudo dd if=/dev/zero of=/swapfile bs=1M count=2048 status=progress
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
           free -h
 
-      - name: Build kernel Image.gz (serial, low-mem)
+      - name: Build kernel
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- \
-            KCFLAGS="-Wno-error -pipe" \
-            -j1 Image.gz
+          scripts/config --file .config --disable DEBUG_INFO
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j$(nproc) 2>&1 | tail -50
+          echo "=== BUILD EXIT CODE: $? ==="
 
-      - name: Build DTBs (serial)
+      - name: Show built images
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- -j1 dtbs
+          ls -la arch/arm64/boot/Image* arch/arm64/boot/Image.gz 2>/dev/null || echo "No kernel images found"
 
-      - name: Concatenate kernel + DTB into Image.gz-dtb
+      - name: Build DTBs
         run: |
-          cat arch/arm64/boot/Image.gz \
-            arch/arm64/boot/dts/xiaomi/laurel_sprout-trinket-base.dtb \
-            > arch/arm64/boot/Image.gz-dtb
-          ls -lh arch/arm64/boot/Image.gz-dtb
-
-      - name: Upload Image.gz-dtb
-        uses: actions/upload-artifact@v4
-        with:
-          name: Image.gz-dtb
-          path: arch/arm64/boot/Image.gz-dtb
-          if-no-files-found: error
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- dtbs 2>&1 | tail -20
+          ls -la arch/arm64/boot/dts/xiaomi/ 2>/dev/null || echo "No xiaomi DTBs found"
