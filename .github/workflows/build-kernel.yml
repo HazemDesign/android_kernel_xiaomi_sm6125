@@ -60,9 +60,17 @@ jobs:
           sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
             arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
 
-      - name: Build kernel + DTBs (serial to avoid OOM)
+      - name: Allocate swap (avoid OOM)
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j1 Image.gz dtbs
+          sudo fallocate -l 4G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: Build kernel + DTBs
+        run: |
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
 
       - name: Concatenate kernel + DTB into Image.gz-dtb
         run: |
