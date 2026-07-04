@@ -45,7 +45,6 @@ jobs:
       - name: Fix GCC 13+ compatibility (__has_attribute)
         run: |
           sed -i '1s/^/#ifndef __has_attribute\n#define __has_attribute(x) 0\n#endif\n/' include/linux/compiler_types.h
-          head -6 include/linux/compiler_types.h
 
       - name: Fix bolero format strings (GCC 13+ -Werror=format)
         run: |
@@ -61,9 +60,9 @@ jobs:
           sed -i 's/THERMAL_MAX_LIMIT/0xFFFFFFFE/g' \
             arch/arm64/boot/dts/qcom/sdmmagpie-thermal-overlay.dtsi
 
-      - name: Build kernel + DTBs
+      - name: Build kernel + DTBs (serial to avoid OOM)
         run: |
-          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j$(nproc) Image.gz dtbs
+          make ARCH=arm64 CROSS_COMPILE=aarch64-linux-gnu- KCFLAGS="-Wno-error" -j1 Image.gz dtbs
 
       - name: Concatenate kernel + DTB into Image.gz-dtb
         run: |
